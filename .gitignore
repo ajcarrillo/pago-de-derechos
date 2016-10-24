@@ -190,4 +190,4 @@ ENV/
 # Rope project settings
 .ropeproject
 
-general/libseq/reporting/settings.template.py
+libseq
