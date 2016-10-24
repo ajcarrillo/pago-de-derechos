@@ -24,7 +24,7 @@ class BancoListView(JsonResponseMixin, generic.ListView):
         if self.kwargs.get('name'):
             queryset = self.model.objects.filter(referencia__contains=self.kwargs['name'])
         elif self.kwargs.get('pk'):
-            queryset = self.model.objects.get(pk=self.kwargs['pk'])
+            queryset = self.model.objects.filter(pk__exact=self.kwargs['pk'])
         else:
             queryset = super(BancoListView, self).get_queryset()
 
