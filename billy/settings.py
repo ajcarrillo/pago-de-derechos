@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'app.general.apps.GeneralConfig',
     'app.banco.apps.BancoConfig',
     'app.concepto.apps.ConceptoConfig',
     'app.ficha_deposito.apps.FichaDepositoConfig',
