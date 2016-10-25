@@ -1,0 +1,17 @@
+# -*- encoding: utf-8 -*
+from django.conf.urls import url
+
+from app.pago import views
+
+# **************************************
+#
+#   url: /pagos/
+#   namespace: pagos
+#
+# **************************************
+
+urlpatterns = [
+    url(r'^deposito/reporte/$', views.ReporteDepositoView.as_view()),
+    url(r'^deposito/referencia/(.*)/$', views.ProblemasPagoView.as_view()),
+    url(r'^asignar-deposito/$', views.AsignarPagoView.as_view())
+]
