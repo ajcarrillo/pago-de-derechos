@@ -69,7 +69,8 @@ class SolicitudPagoResource(APIView):
         transaction.set_autocommit(False)
         try:
             '''parámetros obligatorios: concepto, cantidad, contribuyente[nombre_completo, municipio]'''
-            data = json.loads(request.raw_post_data)
+
+            data = json.loads(request.body)
             self.clean_dict(data)
             # concepto de pago (obligatorio)
             concepto = Concepto.objects.filter(clave=data.get('concepto'))
@@ -189,6 +190,9 @@ class SolicitudPagoResource(APIView):
             # preparando la respuesta
             http_response = HttpResponse(status=201)
             http_response['Location'] = '/solicitud-pago/%s' % solicitud_pago.id
+            print ('*' * 50)
+            print (http_response)
+            print ('*' * 50)
             transaction.commit()
             return http_response
         except Exception as e:
