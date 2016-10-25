@@ -21,4 +21,5 @@ urlpatterns = [
     url(r'^bancos/', include('app.banco.urls', namespace='bancos')),
     url(r'^conceptos/', include('app.concepto.urls', namespace='conceptos')),
     url(r'^fichas-deposito/', include('app.ficha_deposito.urls', namespace='fichas_deposito')),
+    url(r'^solicitud-pago/', include('app.solicitud_pago.urls', namespace='solicitud_pago')),
 ]
