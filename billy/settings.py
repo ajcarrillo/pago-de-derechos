@@ -103,4 +103,3 @@ USE_TZ = False
 
 STATIC_URL = '/static/'
 
-BILLY_SERVICE_URL = local_settings.BILLY_SERVICE_URL
