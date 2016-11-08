@@ -23,7 +23,7 @@ class ReporteDepositoView(generic.View):
 
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
-        return super(ReporteDepositoAPI, self).dispatch(*args, **kwargs)
+        return super(ReporteDepositoView, self).dispatch(*args, **kwargs)
 
     def post(self, request):
         transaction.set_autocommit(False)
