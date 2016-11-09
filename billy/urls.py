@@ -22,4 +22,5 @@ urlpatterns = [
     url(r'^conceptos/', include('app.concepto.urls', namespace='conceptos')),
     url(r'^fichas-deposito/', include('app.ficha_deposito.urls', namespace='fichas_deposito')),
     url(r'^solicitud-pago/', include('app.solicitud_pago.urls', namespace='solicitud_pago')),
+    url(r'^pagos/', include('app.pago.urls', namespace='pagos')),
 ]

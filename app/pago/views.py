@@ -1,7 +1,9 @@
+# -*- encoding: utf-8 -*
 import datetime
 import decimal
 import hashlib
 import json
+import time
 from unicodedata import normalize
 
 from django.db import transaction
@@ -160,7 +162,7 @@ class ReporteDepositoView(generic.View):
                 linea_captura = splits[len(splits) - 1]
                 if linea_captura[:1] != '+': continue
                 self.pagos_reportados += 1
-                fecha = datetime.time.strptime(timestamp[:8], '%d%m%Y')
+                fecha = time.strptime(timestamp[:8], '%d%m%Y')
                 """
 					FIX PROCESO 2015: Aparecieron pagos a referencias de 19 dígitos y se aprobaron debido a que el banco acepta
 					referencias de 18, 19 y 20 dígitos. Únicamente se leen los primeros 18 dígitos de derecha a izquiera como
@@ -206,7 +208,7 @@ class ReporteDepositoView(generic.View):
 
                 referencia = splits[10]
                 asignar = self.se_asignara(referencia)
-                fecha = datetime.time.strptime(splits[14], '%d/%m/%Y')
+                fecha = time.strptime(splits[14], '%d/%m/%Y')
 
                 deposito = Deposito()
                 deposito.fecha = datetime.date(fecha.tm_year, fecha.tm_mon, fecha.tm_mday)
