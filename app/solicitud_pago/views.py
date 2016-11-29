@@ -95,7 +95,7 @@ class SolicitudPagoResource(APIView):
             curp = data['contribuyente'].get('curp')
 
             # Validacion para los extranjeros: estos siempre tendran la misma CURP
-            if curp == '000000000000000000':
+            if curp == '000000000000000000' or curp is None:
                 # Buscamos por nombre
                 try:
                     contribuyente = Contribuyente.objects.filter(nombre_completo=nombre_completo)[:1].get()
