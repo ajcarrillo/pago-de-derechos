@@ -3,6 +3,7 @@ import datetime
 import decimal
 import hashlib
 import json
+import logging
 import time
 from unicodedata import normalize
 
@@ -15,6 +16,9 @@ from django.views.decorators.csrf import csrf_exempt
 
 from app.pago.models import ReporteDeposito, Deposito
 from app.solicitud_pago.models import ReferenciaPago, SolicitudPago, Banco
+
+logger = logging.getLogger('carga_de_pagos')
+module = 'app/pago/views.py'
 
 
 class ReporteDepositoView(generic.View):
@@ -71,9 +75,7 @@ class ReporteDepositoView(generic.View):
                 raise Exception('No se pudo procesar exitosamente ningún depósito')
             self.reporte_procesado.depositos_reportados = self.pagos_reportados
             self.reporte_procesado.depositos_procesados = self.pagos_realizados
-            print '*' * 50
-            print contenido_archivo
-            print '*' * 50
+            logger.warning(contenido_archivo)
             self.reporte_procesado.contenido_original = str(contenido_archivo.decode("utf8", "ignore"))
             self.reporte_procesado.contenido_fallido = self.contenido_invalido
             self.reporte_procesado.save()
@@ -83,7 +85,7 @@ class ReporteDepositoView(generic.View):
                         self.reporte_procesado.depositos_procesados, self.reporte_procesado.contenido_fallido)
             return HttpResponse(msg, status=400)
         except Exception as e:
-            print e
+            logger.warning(str(e))
             transaction.rollback()
             return HttpResponse(e, status=400)
 
@@ -130,7 +132,7 @@ class ReporteDepositoView(generic.View):
                     raise Exception('El depósito que reporta el banco no concuerda')
                 self.pagos_realizados += 1
             except Exception as e:
-                print e
+                logger.warning(e)
                 campos_pagos_invalidos += [fecha, f1, f2, referencia, final_referencia, abono]
         if len(campos_pagos_invalidos) > 0:
             self.contenido_invalido = '|'.join(campos_pagos_invalidos)
@@ -163,8 +165,6 @@ class ReporteDepositoView(generic.View):
                     referencia = '00' + referencia
                 self.guardar_deposito(fecha, referencia)
             except Exception as e:
-                # TODO: Impletar un log de excepciones y retirar todos los prints en consola
-                print str(e)
                 pagos_invalidos.append(str(e))
         if len(pagos_invalidos) > 0:
             self.contenido_invalido = '<br>'.join(pagos_invalidos)
@@ -186,7 +186,7 @@ class ReporteDepositoView(generic.View):
                 fecha = time.strptime(splits[14], '%d/%m/%Y')
                 self.guardar_deposito(fecha, referencia)
             except Exception as e:
-                print e
+                logger.warning(e)
                 pagos_invalidos.append(str(e))
         if len(pagos_invalidos) > 0:
             self.contenido_invalido = '<br>'.join(pagos_invalidos)
@@ -237,6 +237,8 @@ class ReporteDepositoView(generic.View):
                 deposito.save()
                 self.pagos_realizados += 1
             except Exception as e:
+                message = '{0} - {1} - {2}'.format(module, 'line 240', e.message)
+                logger.warning(message)
                 raise Exception(e.message)
 
     def remover_acentos(txt, codif='utf-8'):
