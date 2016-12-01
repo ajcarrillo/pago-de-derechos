@@ -90,21 +90,6 @@ class ReporteDepositoView(generic.View):
     def get(self, request):
         return HttpResponse('No se permite obtener la lista de reportes', status=404)
 
-    def asignar_pago_solicitud(self, referencia, deposito):
-        referencia_pago = ReferenciaPago.objects.filter(referencia=referencia)
-        if referencia_pago.exists():
-            referencia_pago = referencia_pago.get()
-        else:
-            raise Exception('No existe la referencia de pago {0}'.format(referencia))
-        solicitud_pago = SolicitudPago.objects.filter(referencia_pago=referencia_pago)
-        if solicitud_pago.exists():
-            solicitud_pago = solicitud_pago.get()
-            solicitud_pago.deposito = deposito
-            solicitud_pago.save()
-            return solicitud_pago
-        else:
-            raise Exception('No existe una solicitud de pago con referencia {0}'.format(referencia))
-
     def procesar_reporte_bancomer(self, contenido):
         pipe_separated = str(contenido).split('|')
         registros_por_deposito = 6
@@ -163,31 +148,22 @@ class ReporteDepositoView(generic.View):
                 if linea_captura[:1] != '+': continue
                 self.pagos_reportados += 1
                 fecha = time.strptime(timestamp[:8], '%d%m%Y')
-                """
-					FIX PROCESO 2015: Aparecieron pagos a referencias de 19 dígitos y se aprobaron debido a que el banco acepta
-					referencias de 18, 19 y 20 dígitos. Únicamente se leen los primeros 18 dígitos de derecha a izquiera como
-					referencia. Si los primeros dos dígitos de esta referencia son 26, asumimos que es una referencia correcta
-					de pago, le agregamos los dos ceros a la izquierda y continuamos el proceso
-				"""
+
+                '''
+                FIX PROCESO 2015: Aparecieron pagos a referencias de 19 dígitos y se aprobaron debido a que el banco acepta
+                referencias de 18, 19 y 20 dígitos. Únicamente se leen los primeros 18 dígitos de derecha a izquiera como
+                referencia. Si los primeros dos dígitos de esta referencia son 26, asumimos que es una referencia correcta
+                de pago, le agregamos los dos ceros a la izquierda y continuamos el proceso
+                '''
+
                 referencia = linea_captura[-18:]
                 if referencia[0:2] != '26':
                     raise Exception('Referencia no valida')
                 else:
                     referencia = '00' + referencia
-                asignar = self.se_asignara(referencia)
-                deposito = Deposito()
-                deposito.fecha = datetime.date(fecha.tm_year, fecha.tm_mon, fecha.tm_mday)
-                deposito.referencia = referencia
-                deposito.abono = decimal.Decimal('0')
-                deposito.saldo = decimal.Decimal('0')
-                deposito.reporte_deposito = self.reporte_procesado
-                deposito.save()
-                if asignar is True:
-                    solicitud_pago = self.asignar_pago_solicitud(referencia, deposito)
-                    deposito.abono = solicitud_pago.total
-                deposito.save()
-                self.pagos_realizados += 1
+                self.guardar_deposito(fecha, referencia)
             except Exception as e:
+                # TODO: Impletar un log de excepciones y retirar todos los prints en consola
                 print str(e)
                 pagos_invalidos.append(str(e))
         if len(pagos_invalidos) > 0:
@@ -207,40 +183,61 @@ class ReporteDepositoView(generic.View):
                 self.pagos_reportados += 1
 
                 referencia = splits[10]
-                asignar = self.se_asignara(referencia)
                 fecha = time.strptime(splits[14], '%d/%m/%Y')
-
-                deposito = Deposito()
-                deposito.fecha = datetime.date(fecha.tm_year, fecha.tm_mon, fecha.tm_mday)
-                deposito.referencia = referencia
-                deposito.saldo = decimal.Decimal('0')
-                deposito.abono = decimal.Decimal('0')
-                deposito.reporte_deposito = self.reporte_procesado
-                deposito.save()
-                referencia = deposito.referencia
-                if asignar is True:
-                    solicitud_pago = self.asignar_pago_solicitud(referencia, deposito)
-                    deposito.abono = solicitud_pago.total
-                deposito.save()
-                self.pagos_realizados += 1
+                self.guardar_deposito(fecha, referencia)
             except Exception as e:
                 print e
                 pagos_invalidos.append(str(e))
         if len(pagos_invalidos) > 0:
             self.contenido_invalido = '<br>'.join(pagos_invalidos)
 
-    """
-		Función para saber si se asignará o no el deposito a la solicitud de pago.
-		Esto sirve para siempre asignar el primer deposito a la solicitud de pago.
-	"""
-
     def se_asignara(self, referencia):
+        """
+        Función para saber si se asignará o no el deposito a la solicitud de pago.
+        Esto sirve para siempre asignar el primer deposito a la solicitud de pago.
+        """
         deposito = Deposito.objects.filter(referencia=referencia)
 
         if len(deposito) == 0:
             return True
         else:
             return False
+
+    def asignar_pago_solicitud(self, referencia, deposito):
+        referencia_pago = ReferenciaPago.objects.filter(referencia=referencia)
+        if referencia_pago.exists():
+            referencia_pago = referencia_pago.get()
+        else:
+            raise Exception('No existe la referencia de pago {0}'.format(referencia))
+        solicitud_pago = SolicitudPago.objects.filter(referencia_pago=referencia_pago)
+        if solicitud_pago.exists():
+            solicitud_pago = solicitud_pago.get()
+            solicitud_pago.deposito = deposito
+            solicitud_pago.save()
+            return solicitud_pago
+        else:
+            raise Exception('No existe una solicitud de pago con referencia {0}'.format(referencia))
+
+    def guardar_deposito(self, fecha, referencia):
+        try:
+            Deposito.objects.get(referencia=referencia)
+        except Deposito.DoesNotExist:
+            try:
+                asignar = self.se_asignara(referencia)
+                deposito = Deposito()
+                deposito.fecha = datetime.date(fecha.tm_year, fecha.tm_mon, fecha.tm_mday)
+                deposito.referencia = referencia
+                deposito.abono = decimal.Decimal('0')
+                deposito.saldo = decimal.Decimal('0')
+                deposito.reporte_deposito = self.reporte_procesado
+                deposito.save()
+                if asignar is True:
+                    solicitud_pago = self.asignar_pago_solicitud(referencia, deposito)
+                    deposito.abono = solicitud_pago.total
+                deposito.save()
+                self.pagos_realizados += 1
+            except Exception as e:
+                raise Exception(e.message)
 
     def remover_acentos(txt, codif='utf-8'):
         return normalize('NFKD', txt.decode(codif)).encode('ASCII', 'ignore')
