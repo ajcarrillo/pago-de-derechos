@@ -12,6 +12,9 @@ class ReferenciaPago(models.Model):
     class Meta:
         db_table = 'referencia_pago'
 
+    def __unicode__(self):
+        return self.referencia
+
 
 class Contribuyente(models.Model):
     id = models.AutoField(db_column='id', primary_key=True)
@@ -28,6 +31,9 @@ class Contribuyente(models.Model):
 
     class Meta:
         db_table = 'contribuyente'
+
+    def __unicode__(self):
+        return self.nombre_completo
 
 
 class Banco(models.Model):
@@ -51,6 +57,9 @@ class Convenio(models.Model):
     class Meta:
         db_table = 'convenio'
 
+    def __unicode__(self):
+        return self.referencia
+
 
 class Concepto(models.Model):
     id = models.AutoField(db_column='id', primary_key=True)
@@ -61,6 +70,9 @@ class Concepto(models.Model):
 
     class Meta:
         db_table = 'concepto'
+
+    def __unicode__(self):
+        return self.descripcion
 
 
 class ConvenioPagoConcepto(models.Model):
@@ -80,6 +92,9 @@ class SalarioMinimo(models.Model):
 
     class Meta:
         db_table = 'salario_minimo'
+
+    def __unicode__(self):
+        return str(self.monto)
 
 
 class SolicitudPago(models.Model):

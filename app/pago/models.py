@@ -33,3 +33,6 @@ class Deposito(models.Model):
 
     class Meta:
         db_table = 'deposito'
+
+    def __unicode__(self):
+        return "%s - %s" % (self.id, self.referencia)
