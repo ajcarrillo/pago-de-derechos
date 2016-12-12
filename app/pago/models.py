@@ -18,6 +18,9 @@ class ReporteDeposito(models.Model):
     class Meta:
         db_table = 'reporte_deposito'
 
+    def __unicode__(self):
+        return self.nombre_original
+
 
 class Deposito(models.Model):
     id = models.AutoField(db_column='id', primary_key=True)
