@@ -19,9 +19,10 @@ wsgiref==0.1.2
 ```
 
 ##### PentahoReport
-* Clonar la rama del proyecto PentahoReport`
+* Clonar la rama para python del proyecto PentahoReport, en un directorio de tu proyecto. 
 
-
+```
+git clone -b report-designer-python  https://gitlab.com/educacionqroomx/PentahoReport.git
 ```
 
 ## :baby_symbol: Baby steps I
