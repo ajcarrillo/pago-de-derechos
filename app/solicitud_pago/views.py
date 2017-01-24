@@ -129,8 +129,11 @@ class SolicitudPagoResource(APIView):
             if contribuyente.rfc is not None and len(contribuyente.rfc) != 13:
                 raise Exception('RFC del contribuyente inválido')
             contribuyente.curp = data['contribuyente'].get('curp')
+            """
+            Dado que el registro automatico de siem jala los datos de siceeb alguna CURP no contienen los 18 caracteres
             if contribuyente.curp is not None and len(contribuyente.curp) != 18:
                 raise Exception('CURP del contribuyente inválida')
+            """
             contribuyente.entidad_federativa = 'Quintana Roo'
             contribuyente.localidad = data['contribuyente'].get('localidad')
             contribuyente.colonia = data['contribuyente'].get('colonia')
