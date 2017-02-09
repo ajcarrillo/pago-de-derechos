@@ -103,7 +103,7 @@ class SolicitudPago(models.Model):
     concepto = models.ForeignKey(Concepto, db_column='concepto')
     cantidad = models.IntegerField(db_column='cantidad')
     salario_minimo = models.ForeignKey(SalarioMinimo, db_column='salario_minimo')
-    referencia_pago = models.ForeignKey(ReferenciaPago, db_column='referencia_pago')
+    referencia_pago = models.ForeignKey(ReferenciaPago, db_column='referencia_pago', related_name='referencia_pago_related')
     fecha_solicitud = models.DateField(db_column='fecha_solicitud')
     monto = models.DecimalField(db_column='monto', max_digits=8, decimal_places=2)
     descuento = models.DecimalField(db_column='descuento', max_digits=8, decimal_places=2)
