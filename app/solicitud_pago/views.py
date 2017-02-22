@@ -3,6 +3,7 @@ import datetime
 import decimal
 import json
 
+import math
 from django.db import transaction
 from django.db.models import Sum
 from django.forms.models import model_to_dict
@@ -23,7 +24,8 @@ MUNICIPIOS_VALIDOS = {
     '07': 'Lázaro Cárdenas',
     '08': 'Solidaridad',
     '09': 'Tulum',
-    '10': 'Bacalar'
+    '10': 'Bacalar',
+    '11': 'Puerto Morelos'
 }
 
 
@@ -174,7 +176,8 @@ class SolicitudPagoResource(APIView):
             # redondeo del monto, no se cobran centavos
             solicitud_pago.monto = solicitud_pago.monto.quantize(decimal.Decimal('0'), rounding=decimal.ROUND_HALF_UP)
             solicitud_pago.descuento = decimal.Decimal(descuento).quantize(decimal.Decimal('0'), rounding=decimal.ROUND_HALF_UP)
-            solicitud_pago.total = solicitud_pago.monto - solicitud_pago.descuento
+            t = solicitud_pago.monto - (solicitud_pago.monto * (solicitud_pago.descuento/100))
+            solicitud_pago.total = decimal.Decimal(math.ceil(t)).quantize(decimal.Decimal('0'), rounding=decimal.ROUND_HALF_UP)
             if solicitud_pago.total < 0:
                 raise Exception('El descuento excede el monto total a pagar')
 
