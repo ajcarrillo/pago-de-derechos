@@ -75,7 +75,7 @@ class ReporteDepositoView(generic.View):
                 raise Exception('No se pudo procesar exitosamente ningún depósito')
             self.reporte_procesado.depositos_reportados = self.pagos_reportados
             self.reporte_procesado.depositos_procesados = self.pagos_realizados
-            logger.warning(contenido_archivo)
+            # logger.warning(contenido_archivo)
             self.reporte_procesado.contenido_original = str(contenido_archivo.decode("utf8", "ignore"))
             self.reporte_procesado.contenido_fallido = self.contenido_invalido
             self.reporte_procesado.save()
