@@ -220,7 +220,9 @@ class ReporteDepositoView(generic.View):
 
     def guardar_deposito(self, fecha, referencia):
         try:
-            Deposito.objects.get(referencia=referencia)
+            deposito = Deposito.objects.get(referencia=referencia)
+            deposito.multiples_pagos += 1
+            deposito.save()
         except Deposito.DoesNotExist:
             try:
                 asignar = self.se_asignara(referencia)
