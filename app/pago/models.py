@@ -30,7 +30,7 @@ class Deposito(models.Model):
     saldo = models.DecimalField(db_column='saldo', max_digits=8, decimal_places=2)
     cargo = models.DecimalField(db_column='cargo', max_digits=8, decimal_places=2, null=True)
     reporte_deposito = models.ForeignKey(ReporteDeposito, db_column='reporte_deposito')
-    multiples_pagos = models.IntegerField(db_column='multiples_pagos', null=True)
+    multiples_pagos = models.IntegerField(db_column='multiples_pagos', default=1)
 
     class Meta:
         db_table = 'deposito'
