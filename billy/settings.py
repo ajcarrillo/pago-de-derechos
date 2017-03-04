@@ -100,6 +100,10 @@ STATIC_ROOT = 'billy/static/'
 
 STATIC_URL = '/static/'
 
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
+
 LOGGING = {
     'version':                  1,
     'disable_existing_loggers': False,
