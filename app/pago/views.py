@@ -464,7 +464,6 @@ class CreateDeposito(JsonResponseUtils, generic.View):
                 'abono':            deposito.abono,
                 'saldo':            deposito.saldo,
                 'cargo':            deposito.cargo,
-                'reporte_deposito': deposito.reporte_deposito,
                 'multiples_pagos':  deposito.multiples_pagos,
             }
             self.response.update({'deposito': data})
