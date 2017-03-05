@@ -332,15 +332,33 @@ class JsonResponseUtils(object):
     fill = []
     invalid_fields = []
     invalid_content = None
-    response = {
-        'msg':      '',
-        'is_valid': False
-    }
+    response = None
     status_code = 200
+    is_valid = True
+    msg = None
+    errors = None
 
     @csrf_exempt
     def dispatch(self, request, *args, **kwargs):
+        self._get_response()
         return super(JsonResponseUtils, self).dispatch(request, *args, **kwargs)
+
+    def _validate_fill_fields(self):
+        for field in self.fill:
+            if field not in self.request.POST:
+                self.invalid_fields.append(field)
+        if len(self.invalid_fields) > 0:
+            return False
+        return True
+
+    def _get_response(self):
+        self.response = {'errors': self.errors}
+
+    def validate_fillable_fields(self):
+        if not self._validate_fill_fields():
+            self.invalid_content = ', '.join(self.invalid_fields)
+            raise Exception('missing field: ' + self.invalid_content)
+        return True
 
 
 class PaymentIssue(JsonResponseUtils, generic.View):
@@ -394,6 +412,27 @@ class PaymentIssue(JsonResponseUtils, generic.View):
         except Exception as e:
             self.status_code = 404
             self.response['msg'] = e.message
+
+        return JsonResponse(self.response, safe=True, status=self.status_code)
+
+
+class DecreaseMultiplePayments(JsonResponseUtils, generic.View):
+    fill = ['referencia']
+
+    def post(self, request):
+        try:
+            self.validate_fillable_fields()
+            deposito = Deposito.get_by_referencia(request.POST.get('referencia'))
+            if deposito.multiples_pagos == 1:
+                raise Exception("La referencia {0} no tiene multiples pagos".format(deposito.referencia))
+            deposito.multiples_pagos -= 1
+            deposito.save()
+            self.response.update({'errors': ''})
+        except Deposito.DoesNotExist as e:
+            self.response.update({'errors': e.message})
+            self.status_code = 404
+        except Exception as e:
+            self.response.update({'errors': e.message})
 
         return JsonResponse(self.response, safe=True, status=self.status_code)
 
@@ -458,13 +497,13 @@ class CreateDeposito(JsonResponseUtils, generic.View):
 
             deposito = self.create_deposito(fecha, abono, referencia, reporte_deposito)
             data = {
-                'id':               deposito.id,
-                'fecha':            deposito.fecha,
-                'referencia':       deposito.referencia,
-                'abono':            deposito.abono,
-                'saldo':            deposito.saldo,
-                'cargo':            deposito.cargo,
-                'multiples_pagos':  deposito.multiples_pagos,
+                'id':              deposito.id,
+                'fecha':           deposito.fecha,
+                'referencia':      deposito.referencia,
+                'abono':           deposito.abono,
+                'saldo':           deposito.saldo,
+                'cargo':           deposito.cargo,
+                'multiples_pagos': deposito.multiples_pagos,
             }
             self.response.update({'deposito': data})
             self.status_code = 200
