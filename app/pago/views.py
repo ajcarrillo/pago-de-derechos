@@ -346,19 +346,29 @@ class JsonResponseUtils(object):
 class PaymentIssue(JsonResponseUtils, generic.View):
     def get(self, request, referencia):
         try:
-            deposito = Deposito.objects.prefetch_related('solicitud_de_pago_related', 'solicitud_de_pago_related__contribuyente', 'solicitud_de_pago_related__referencia_pago').get(
-                referencia__exact=referencia)
+            deposito = Deposito.objects.prefetch_related(
+                'solicitud_de_pago_related', 'solicitud_de_pago_related__contribuyente', 'solicitud_de_pago_related__referencia_pago').select_related(
+                'reporte_deposito', 'reporte_deposito__banco').get(referencia__exact=referencia)
             data = {
                 'id':                    deposito.id,
                 'fecha':                 deposito.fecha.isoformat(),
                 'abono':                 deposito.abono,
                 'saldo':                 deposito.saldo,
                 'cargo':                 deposito.cargo,
+                'reporte':               [],
                 'referencia':            deposito.referencia,
                 'solicitud_pago':        [],
                 'multiples_pagos':       deposito.multiples_pagos,
                 'has_multiple_payments': False if deposito.multiples_pagos == 1 else True
             }
+
+            if deposito.reporte_deposito is not None:
+                reporte = {
+                    'banco':       deposito.reporte_deposito.banco.referencia,
+                    'nombre':      deposito.reporte_deposito.nombre_original,
+                    'fecha_carga': deposito.reporte_deposito.fecha_carga.isoformat(),
+                }
+                data['reporte'].append(reporte)
 
             if hasattr(deposito, 'solicitud_de_pago_related'):
                 for solicitud_pago in deposito.solicitud_de_pago_related.all():
