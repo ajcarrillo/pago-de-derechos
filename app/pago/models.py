@@ -37,3 +37,11 @@ class Deposito(models.Model):
 
     def __unicode__(self):
         return "%s - %s" % (self.id, self.referencia)
+
+    @staticmethod
+    def get_by_referencia(referencia=None):
+        if referencia is None:
+            raise Exception("Missing referencia param")
+        return Deposito.objects.prefetch_related(
+            'solicitud_de_pago_related', 'solicitud_de_pago_related__contribuyente', 'solicitud_de_pago_related__referencia_pago').select_related(
+            'reporte_deposito', 'reporte_deposito__banco').get(referencia__exact=referencia)
