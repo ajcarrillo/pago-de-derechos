@@ -27,9 +27,9 @@ class Deposito(models.Model):
     fecha = models.DateField(db_column='fecha')
     referencia = models.CharField(db_column='referencia', max_length=255)
     abono = models.DecimalField(db_column='abono', max_digits=8, decimal_places=2)
-    saldo = models.DecimalField(db_column='saldo', max_digits=8, decimal_places=2)
+    saldo = models.DecimalField(db_column='saldo', max_digits=8, decimal_places=2, null=True)
     cargo = models.DecimalField(db_column='cargo', max_digits=8, decimal_places=2, null=True)
-    reporte_deposito = models.ForeignKey(ReporteDeposito, db_column='reporte_deposito')
+    reporte_deposito = models.ForeignKey(ReporteDeposito, db_column='reporte_deposito', null=True)
     multiples_pagos = models.IntegerField(db_column='multiples_pagos', default=1)
 
     class Meta:
