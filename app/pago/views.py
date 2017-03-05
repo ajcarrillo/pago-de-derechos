@@ -333,12 +333,59 @@ class JsonResponseUtils(object):
     invalid_fields = []
     invalid_content = None
     response = {
+        'msg':      '',
         'is_valid': False
     }
+    status_code = 200
 
     @csrf_exempt
     def dispatch(self, request, *args, **kwargs):
         return super(JsonResponseUtils, self).dispatch(request, *args, **kwargs)
+
+
+class PaymentIssue(JsonResponseUtils, generic.View):
+    def get(self, request, referencia):
+        try:
+            deposito = Deposito.objects.prefetch_related('solicitud_de_pago_related', 'solicitud_de_pago_related__contribuyente', 'solicitud_de_pago_related__referencia_pago').get(
+                referencia__exact=referencia)
+            data = {
+                'id':                    deposito.id,
+                'fecha':                 deposito.fecha.isoformat(),
+                'abono':                 deposito.abono,
+                'saldo':                 deposito.saldo,
+                'cargo':                 deposito.cargo,
+                'referencia':            deposito.referencia,
+                'solicitud_pago':        [],
+                'multiples_pagos':       deposito.multiples_pagos,
+                'has_multiple_payments': False if deposito.multiples_pagos == 1 else True
+            }
+
+            if hasattr(deposito, 'solicitud_de_pago_related'):
+                for solicitud_pago in deposito.solicitud_de_pago_related.all():
+                    solicitud = {
+                        'id':              solicitud_pago.id,
+                        'contribuyente':   solicitud_pago.contribuyente.nombre_completo,
+                        'referencia':      solicitud_pago.referencia_pago.referencia,
+                        'cantidad':        solicitud_pago.cantidad,
+                        'fecha_solicitud': solicitud_pago.fecha_solicitud,
+                        'monto':           str(solicitud_pago.monto),
+                        'descuento':       str(solicitud_pago.descuento),
+                        'total':           str(solicitud_pago.total)
+                    }
+                    data['solicitud_pago'].append(solicitud)
+            self.response.update({'deposito': data,
+                                  'resumen':  {
+                                      'cant_depositos':   deposito.multiples_pagos,
+                                      'cant_solicitudes': deposito.solicitud_de_pago_related.count()
+                                  }
+                                  })
+            self.status_code = 200
+            self.response['is_valid'] = True
+        except Exception as e:
+            self.status_code = 404
+            self.response['msg'] = e.message
+
+        return JsonResponse(self.response, safe=True, status=self.status_code)
 
 
 class CreateDeposito(JsonResponseUtils, generic.View):
