@@ -7,9 +7,12 @@ import logging
 import time
 from unicodedata import normalize
 
+from django.core import serializers
 from django.db import transaction
 from django.forms import model_to_dict
 from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
+from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import generic
 from django.views.decorators.csrf import csrf_exempt
@@ -323,3 +326,94 @@ class AsignarPagoView(generic.View):
             return HttpResponse(json.dumps(response, indent=4), content_type='application/json; charset=UTF-8')
         except Exception as e:
             return HttpResponse(e, status=404)
+
+
+class JsonResponseUtils(object):
+    fill = []
+    invalid_fields = []
+    invalid_content = None
+    response = {
+        'is_valid': False
+    }
+
+    @csrf_exempt
+    def dispatch(self, request, *args, **kwargs):
+        return super(JsonResponseUtils, self).dispatch(request, *args, **kwargs)
+
+
+class CreateDeposito(JsonResponseUtils, generic.View):
+    fill = ['referencia', 'abono', 'reporte_deposito']
+
+    def validate_fields(self):
+        for field in self.fill:
+            if field not in self.request.POST:
+                self.invalid_fields.append(field)
+        if len(self.invalid_fields) > 0:
+            return False
+        return True
+
+    @staticmethod
+    def validate_referencia(referencia):
+        if not ReferenciaPago.objects.filter(referencia__exact=referencia).exists():
+            return False
+        return True
+
+    @staticmethod
+    def create_deposito(fecha=None, abono=None, referencia=None, reporte_deposito=None):
+        try:
+            deposito = Deposito.objects.get(referencia=referencia)
+            deposito.multiples_pagos += 1
+            deposito.save()
+            return deposito
+        except Deposito.DoesNotExist:
+            try:
+                deposito = Deposito()
+                deposito.fecha = fecha
+                deposito.referencia = referencia
+                deposito.abono = abono
+                deposito.saldo = decimal.Decimal('0')
+                deposito.cargo = decimal.Decimal('0')
+                deposito.reporte_deposito = None if reporte_deposito == '0' else reporte_deposito
+                deposito.save()
+                return deposito
+            except Exception as e:
+                raise
+
+    def get(self, request):
+        return HttpResponseBadRequest("Bad request!")
+
+    def post(self, request):
+        try:
+            if not self.validate_fields():
+                self.invalid_content = ', '.join(self.invalid_fields)
+                self.response.update({'errors': 'missing field: ' + self.invalid_content})
+                raise Exception
+
+            fecha = datetime.datetime.today()
+            abono = request.POST.get('abono')
+            referencia = request.POST.get('referencia')
+            reporte_deposito = request.POST.get('reporte_deposito')
+
+            if not self.validate_referencia(referencia):
+                self.invalid_content = 'la referencia {0} no existe'.format(referencia)
+                self.response.update({'errors': self.invalid_content})
+                raise Exception
+
+            deposito = self.create_deposito(fecha, abono, referencia, reporte_deposito)
+            data = {
+                'id':               deposito.id,
+                'fecha':            deposito.fecha,
+                'referencia':       deposito.referencia,
+                'abono':            deposito.abono,
+                'saldo':            deposito.saldo,
+                'cargo':            deposito.cargo,
+                'reporte_deposito': deposito.reporte_deposito,
+                'multiples_pagos':  deposito.multiples_pagos,
+            }
+            self.response.update({'deposito': data})
+            self.status_code = 200
+            self.response['is_valid'] = True
+        except Exception as e:
+            pass
+
+        return JsonResponse(self.response, safe=True, status=self.status_code)
