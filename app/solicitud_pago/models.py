@@ -15,6 +15,15 @@ class ReferenciaPago(models.Model):
     def __unicode__(self):
         return self.referencia
 
+    @staticmethod
+    def validate_referencia(referencia=None):
+        if referencia is None:
+            raise Exception("Missing referencia param")
+
+        if not ReferenciaPago.objects.filter(referencia__exact=referencia).exists():
+            return False
+        return True
+
 
 class Contribuyente(models.Model):
     id = models.AutoField(db_column='id', primary_key=True)
