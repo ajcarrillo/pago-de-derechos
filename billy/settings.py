@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'app.ficha_deposito.apps.FichaDepositoConfig',
     'app.pago.apps.PagoConfig',
     'app.solicitud_pago.apps.SolicitudPagoConfig',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
@@ -52,6 +53,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
 
 ROOT_URLCONF = 'billy.urls'
@@ -103,6 +106,8 @@ STATIC_URL = '/static/'
 FILE_UPLOAD_HANDLERS = [
     'django.core.files.uploadhandler.TemporaryFileUploadHandler',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = True
 
 LOGGING = {
     'version':                  1,
