@@ -357,55 +357,61 @@ class JsonResponseUtils(object):
 
 
 class PaymentIssue(JsonResponseUtils, generic.View):
+    data = []
+    solicitudes_de_pago = 0
+
     def get(self, request, referencia):
         try:
-            deposito = Deposito.objects.prefetch_related(
+            depositos = Deposito.objects.prefetch_related(
                 'solicitud_de_pago_related', 'solicitud_de_pago_related__contribuyente', 'solicitud_de_pago_related__referencia_pago').select_related(
-                'reporte_deposito', 'reporte_deposito__banco').get(referencia__exact=referencia)
-            data = {
-                'id':                    deposito.id,
-                'fecha':                 deposito.fecha.isoformat(),
-                'abono':                 deposito.abono,
-                'saldo':                 deposito.saldo,
-                'cargo':                 deposito.cargo,
-                'reporte':               [],
-                'referencia':            deposito.referencia,
-                'solicitud_pago':        [],
-                'multiples_pagos':       deposito.multiples_pagos,
-                'has_multiple_payments': False if deposito.multiples_pagos == 1 else True
-            }
+                'reporte_deposito', 'reporte_deposito__banco').filter(referencia__iexact=referencia)
 
-            if deposito.reporte_deposito is not None:
-                reporte = {
-                    'banco':       deposito.reporte_deposito.banco.referencia,
-                    'nombre':      deposito.reporte_deposito.nombre_original,
-                    'fecha_carga': deposito.reporte_deposito.fecha_carga.isoformat(),
+            if not depositos.exists():
+                self.status_code = 404
+                raise Exception("La referencia no existe")
+
+            for deposito in depositos:
+                payment = {
+                    'id':                    deposito.id,
+                    'fecha':                 deposito.fecha.isoformat(),
+                    'abono':                 deposito.abono,
+                    'saldo':                 deposito.saldo,
+                    'cargo':                 deposito.cargo,
+                    'reporte':               [],
+                    'referencia':            deposito.referencia,
+                    'solicitud_pago':        [],
                 }
-                data['reporte'].append(reporte)
 
-            if hasattr(deposito, 'solicitud_de_pago_related'):
-                for solicitud_pago in deposito.solicitud_de_pago_related.all():
-                    solicitud = {
-                        'id':              solicitud_pago.id,
-                        'contribuyente':   solicitud_pago.contribuyente.nombre_completo,
-                        'referencia':      solicitud_pago.referencia_pago.referencia,
-                        'cantidad':        solicitud_pago.cantidad,
-                        'fecha_solicitud': solicitud_pago.fecha_solicitud,
-                        'monto':           str(solicitud_pago.monto),
-                        'descuento':       str(solicitud_pago.descuento),
-                        'total':           str(solicitud_pago.total)
+                if deposito.reporte_deposito is not None:
+                    reporte = {
+                        'banco':       deposito.reporte_deposito.banco.referencia,
+                        'nombre':      deposito.reporte_deposito.nombre_original,
+                        'fecha_carga': deposito.reporte_deposito.fecha_carga.isoformat(),
                     }
-                    data['solicitud_pago'].append(solicitud)
-            self.response.update({'deposito': data,
-                                  'resumen':  {
-                                      'cant_depositos':   deposito.multiples_pagos,
-                                      'cant_solicitudes': deposito.solicitud_de_pago_related.count()
-                                  }
-                                  })
+                    payment['reporte'].append(reporte)
+
+                if hasattr(deposito, 'solicitud_de_pago_related'):
+                    for solicitud_pago in deposito.solicitud_de_pago_related.all():
+                        solicitud = {
+                            'id':              solicitud_pago.id,
+                            'contribuyente':   solicitud_pago.contribuyente.nombre_completo,
+                            'referencia':      solicitud_pago.referencia_pago.referencia,
+                            'cantidad':        solicitud_pago.cantidad,
+                            'fecha_solicitud': solicitud_pago.fecha_solicitud,
+                            'monto':           str(solicitud_pago.monto),
+                            'descuento':       str(solicitud_pago.descuento),
+                            'total':           str(solicitud_pago.total)
+                        }
+                        payment['solicitud_pago'].append(solicitud)
+                        self.solicitudes_de_pago += 1
+                self.data.append(payment)
+            self.response.update({'deposito': self.data, 'resume': {
+                'cant_depositos': depositos.count(),
+                'cant_solicitudes': self.solicitudes_de_pago
+            }})
             self.status_code = 200
             self.response['is_valid'] = True
         except Exception as e:
-            self.status_code = 404
             self.response['msg'] = e.message
 
         return JsonResponse(self.response, safe=True, status=self.status_code)
