@@ -223,28 +223,23 @@ class ReporteDepositoView(generic.View):
 
     def guardar_deposito(self, fecha, referencia):
         try:
-            deposito = Deposito.objects.get(referencia=referencia)
-            deposito.multiples_pagos += 1
+            asignar = self.se_asignara(referencia)
+            deposito = Deposito()
+            deposito.fecha = datetime.date(fecha.tm_year, fecha.tm_mon, fecha.tm_mday)
+            deposito.referencia = referencia
+            deposito.abono = decimal.Decimal('0')
+            deposito.saldo = decimal.Decimal('0')
+            deposito.reporte_deposito = self.reporte_procesado
             deposito.save()
-        except Deposito.DoesNotExist:
-            try:
-                asignar = self.se_asignara(referencia)
-                deposito = Deposito()
-                deposito.fecha = datetime.date(fecha.tm_year, fecha.tm_mon, fecha.tm_mday)
-                deposito.referencia = referencia
-                deposito.abono = decimal.Decimal('0')
-                deposito.saldo = decimal.Decimal('0')
-                deposito.reporte_deposito = self.reporte_procesado
-                deposito.save()
-                if asignar is True:
-                    solicitud_pago = self.asignar_pago_solicitud(referencia, deposito)
-                    deposito.abono = solicitud_pago.total
-                deposito.save()
-                self.pagos_realizados += 1
-            except Exception as e:
-                message = '{0} - {1} - {2}'.format(module, 'line 240', e.message)
-                logger.warning(message)
-                raise Exception(e.message)
+            if asignar is True:
+                solicitud_pago = self.asignar_pago_solicitud(referencia, deposito)
+                deposito.abono = solicitud_pago.total
+            deposito.save()
+            self.pagos_realizados += 1
+        except Exception as e:
+            message = '{0} - {1} - {2}'.format(module, 'line 240', e.message)
+            logger.warning(message)
+            raise Exception(e.message)
 
     def remover_acentos(txt, codif='utf-8'):
         return normalize('NFKD', txt.decode(codif)).encode('ASCII', 'ignore')
