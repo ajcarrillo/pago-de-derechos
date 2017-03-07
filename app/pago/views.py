@@ -324,7 +324,7 @@ class AsignarPagoView(generic.View):
 
 
 class JsonResponseUtils(object):
-    fill = []
+    fillable = []
     invalid_fields = []
     invalid_content = None
     response = None
@@ -339,7 +339,7 @@ class JsonResponseUtils(object):
         return super(JsonResponseUtils, self).dispatch(request, *args, **kwargs)
 
     def _validate_fill_fields(self):
-        for field in self.fill:
+        for field in self.fillable:
             if field not in self.request.POST:
                 self.invalid_fields.append(field)
         if len(self.invalid_fields) > 0:
@@ -423,7 +423,7 @@ class PaymentIssue(JsonResponseUtils, generic.View):
 
 
 class DecreaseMultiplePayments(JsonResponseUtils, generic.View):
-    fill = ['referencia']
+    fillable = ['referencia']
 
     def post(self, request):
         try:
@@ -444,7 +444,7 @@ class DecreaseMultiplePayments(JsonResponseUtils, generic.View):
 
 
 class CreateDeposito(JsonResponseUtils, generic.View):
-    fill = ['referencia', 'abono', 'reporte_deposito']
+    fillable = ['referencia', 'abono', 'reporte_deposito']
 
     def validate_fields(self):
         for field in self.fill:
