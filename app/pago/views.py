@@ -9,6 +9,7 @@ from unicodedata import normalize
 
 from django.core import serializers
 from django.db import transaction
+from django.db.models import Sum
 from django.forms import model_to_dict
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
@@ -374,14 +375,14 @@ class PaymentIssue(JsonResponseUtils, generic.View):
             payment['solicitud_pago'] = {}
             for deposito in depositos:
                 payment = {
-                    'id':                    deposito.id,
-                    'fecha':                 deposito.fecha.isoformat(),
-                    'abono':                 deposito.abono,
-                    'saldo':                 deposito.saldo,
-                    'cargo':                 deposito.cargo,
-                    'reporte':               [],
-                    'referencia':            deposito.referencia,
-                    'solicitud_pago':        [],
+                    'id':             deposito.id,
+                    'fecha':          deposito.fecha.isoformat(),
+                    'abono':          deposito.abono,
+                    'saldo':          deposito.saldo,
+                    'cargo':          deposito.cargo,
+                    'reporte':        [],
+                    'referencia':     deposito.referencia,
+                    'solicitud_pago': [],
                 }
 
                 if deposito.reporte_deposito is not None:
@@ -411,13 +412,41 @@ class PaymentIssue(JsonResponseUtils, generic.View):
                     solicitudes_de_pago += 1
                 data.append(payment)
             self.response.update({'depositos': data, 'resumen': {
-                'cant_depositos': depositos.count(),
+                'cant_depositos':   depositos.count(),
                 'cant_solicitudes': solicitudes_de_pago
             }})
             self.status_code = 200
             self.response['is_valid'] = True
         except Exception as e:
             self.response['msg'] = e.message
+
+        return JsonResponse(self.response, safe=True, status=self.status_code)
+
+
+class PaymentStatistics(JsonResponseUtils, generic.View):
+    def get(self, request):
+        depositos = Deposito.objects.all().count()
+        monto_pagado = Deposito.objects.all().aggregate(Sum('abono'))
+
+        solicitudes = SolicitudPago.objects.all().count()
+        solicitudes_pagadas = SolicitudPago.objects.exclude(deposito=None).count()
+        solicitudes_pagadas_monto = SolicitudPago.objects.exclude(deposito=None).aggregate(Sum('total'))
+        solicitudes_por_pagar = SolicitudPago.objects.filter(deposito=None).count()
+        solicitudes_por_pagar_monto = SolicitudPago.objects.filter(deposito=None).aggregate(Sum('total'))
+
+        self.response.update({'stats': {
+            'depositos':    {
+                'total': depositos,
+                'monto_pagado': str(monto_pagado['abono__sum']),
+            },
+            'solicitudes': {
+                'total':     solicitudes,
+                'pagadas':   solicitudes_pagadas,
+                'por_pagar': solicitudes_por_pagar,
+                'solicitudes_pagadas_monto': solicitudes_pagadas_monto['total__sum'],
+                'solicitudes_por_pagar_monto': solicitudes_por_pagar_monto['total__sum']
+            }
+        }})
 
         return JsonResponse(self.response, safe=True, status=self.status_code)
 

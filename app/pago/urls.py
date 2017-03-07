@@ -18,4 +18,6 @@ urlpatterns = [
     url(r'^nuevo-deposito/$', views.CreateDeposito.as_view()),
     url(r'^referencia/(.*)/$', views.PaymentIssue.as_view()),
     url(r'^decrease/$', views.DecreaseMultiplePayments.as_view()),
+
+    url(r'^stats/payments/$', views.PaymentStatistics.as_view()),
 ]
