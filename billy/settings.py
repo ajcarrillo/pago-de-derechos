@@ -55,8 +55,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True
-CORS_ALLOW_CREDENTIALS = False
+CORS_ORIGIN_ALLOW_ALL = local_settings.CORS_ORIGIN_ALLOW_ALL
+CORS_ALLOW_CREDENTIALS = local_settings.CORS_ALLOW_CREDENTIALS
+CORS_ORIGIN_WHITELIST = local_settings.CORS_ORIGIN_WHITELIST
 
 ROOT_URLCONF = 'billy.urls'
 
