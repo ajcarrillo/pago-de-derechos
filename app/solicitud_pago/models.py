@@ -116,7 +116,7 @@ class SolicitudPago(models.Model):
     fecha_solicitud = models.DateField(db_column='fecha_solicitud')
     monto = models.DecimalField(db_column='monto', max_digits=8, decimal_places=2)
     descuento = models.DecimalField(db_column='descuento', max_digits=8, decimal_places=2)
-    deposito = models.ForeignKey('pago.Deposito', db_column='deposito', on_delete=models.DO_NOTHING, unique=True, null=True, related_name='solicitud_de_pago_related')
+    deposito = models.OneToOneField('pago.Deposito', db_column='deposito', on_delete=models.DO_NOTHING, null=True, related_name='solicitud_de_pago_related')
     total = models.DecimalField(db_column='total', max_digits=8, decimal_places=2)
 
     class Meta:
