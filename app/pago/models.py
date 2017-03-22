@@ -11,7 +11,7 @@ class ReporteDeposito(models.Model):
     nombre_original = models.CharField(db_column='nombre_reporte', max_length=255)
     fecha_carga = models.DateField(db_column='fecha_carga')
     ip_cliente = models.CharField(db_column='ip_cliente', max_length=15)
-    hash_contenido = models.CharField(db_column='hash_contenido', max_length=40, db_index=True)
+    hash_contenido = models.CharField(db_column='hash_contenido', max_length=40, db_index=True, unique=True)
     contenido_original = models.TextField(db_column='contenido_original')
     contenido_fallido = models.TextField(db_column='contenido_fallido', null=True)
 
