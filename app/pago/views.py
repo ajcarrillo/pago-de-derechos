@@ -393,7 +393,7 @@ class PaymentIssue(JsonResponseUtils, generic.View):
                     }
                     payment['reporte'] = reporte
 
-                solicitud_pago = deposito.solicitud_de_pago_related.first()
+                solicitud_pago = None if not hasattr(deposito, 'solicitud_de_pago_related') else deposito.solicitud_de_pago_related
 
                 if solicitud_pago is None:
                     payment['solicitud_pago'] = None
