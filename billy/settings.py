@@ -101,7 +101,7 @@ USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
-STATIC_ROOT = 'billy/static/'
+STATIC_ROOT = local_settings.STATIC_DIR
 
 STATIC_URL = '/static/'
 
