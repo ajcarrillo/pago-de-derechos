@@ -7,9 +7,13 @@ import logging
 import time
 from unicodedata import normalize
 
+from django.core import serializers
 from django.db import transaction
+from django.db.models import Sum
 from django.forms import model_to_dict
 from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
+from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import generic
 from django.views.decorators.csrf import csrf_exempt
@@ -75,7 +79,7 @@ class ReporteDepositoView(generic.View):
                 raise Exception('No se pudo procesar exitosamente ningún depósito')
             self.reporte_procesado.depositos_reportados = self.pagos_reportados
             self.reporte_procesado.depositos_procesados = self.pagos_realizados
-            logger.warning(contenido_archivo)
+            # logger.warning(contenido_archivo)
             self.reporte_procesado.contenido_original = str(contenido_archivo.decode("utf8", "ignore"))
             self.reporte_procesado.contenido_fallido = self.contenido_invalido
             self.reporte_procesado.save()
@@ -220,26 +224,23 @@ class ReporteDepositoView(generic.View):
 
     def guardar_deposito(self, fecha, referencia):
         try:
-            Deposito.objects.get(referencia=referencia)
-        except Deposito.DoesNotExist:
-            try:
-                asignar = self.se_asignara(referencia)
-                deposito = Deposito()
-                deposito.fecha = datetime.date(fecha.tm_year, fecha.tm_mon, fecha.tm_mday)
-                deposito.referencia = referencia
-                deposito.abono = decimal.Decimal('0')
-                deposito.saldo = decimal.Decimal('0')
-                deposito.reporte_deposito = self.reporte_procesado
-                deposito.save()
-                if asignar is True:
-                    solicitud_pago = self.asignar_pago_solicitud(referencia, deposito)
-                    deposito.abono = solicitud_pago.total
-                deposito.save()
-                self.pagos_realizados += 1
-            except Exception as e:
-                message = '{0} - {1} - {2}'.format(module, 'line 240', e.message)
-                logger.warning(message)
-                raise Exception(e.message)
+            asignar = self.se_asignara(referencia)
+            deposito = Deposito()
+            deposito.fecha = datetime.date(fecha.tm_year, fecha.tm_mon, fecha.tm_mday)
+            deposito.referencia = referencia
+            deposito.abono = decimal.Decimal('0')
+            deposito.saldo = decimal.Decimal('0')
+            deposito.reporte_deposito = self.reporte_procesado
+            deposito.save()
+            if asignar is True:
+                solicitud_pago = self.asignar_pago_solicitud(referencia, deposito)
+                deposito.abono = solicitud_pago.total
+            deposito.save()
+            self.pagos_realizados += 1
+        except Exception as e:
+            message = '{0} - {1} - {2}'.format(module, 'line 240', e.message)
+            logger.warning(message)
+            raise Exception(e.message)
 
     def remover_acentos(txt, codif='utf-8'):
         return normalize('NFKD', txt.decode(codif)).encode('ASCII', 'ignore')
@@ -321,3 +322,228 @@ class AsignarPagoView(generic.View):
             return HttpResponse(json.dumps(response, indent=4), content_type='application/json; charset=UTF-8')
         except Exception as e:
             return HttpResponse(e, status=404)
+
+
+class JsonResponseUtils(object):
+    fillable = []
+    invalid_fields = []
+    invalid_content = None
+    response = None
+    status_code = 200
+    is_valid = True
+    msg = None
+    errors = None
+
+    @csrf_exempt
+    def dispatch(self, request, *args, **kwargs):
+        self._get_response()
+        return super(JsonResponseUtils, self).dispatch(request, *args, **kwargs)
+
+    def _validate_fill_fields(self):
+        for field in self.fillable:
+            if field not in self.request.POST:
+                self.invalid_fields.append(field)
+        if len(self.invalid_fields) > 0:
+            return False
+        return True
+
+    def _get_response(self):
+        self.response = {'errors': self.errors}
+
+    def validate_fillable_fields(self):
+        if not self._validate_fill_fields():
+            self.invalid_content = ', '.join(self.invalid_fields)
+            raise Exception('missing field: ' + self.invalid_content)
+        return True
+
+
+class PaymentIssue(JsonResponseUtils, generic.View):
+    def get(self, request, referencia):
+        try:
+            depositos = Deposito.objects.prefetch_related(
+                'solicitud_de_pago_related', 'solicitud_de_pago_related__contribuyente', 'solicitud_de_pago_related__referencia_pago').select_related(
+                'reporte_deposito', 'reporte_deposito__banco').filter(referencia__exact=referencia)
+
+            if not depositos.exists():
+                self.status_code = 404
+                raise Exception("La referencia no existe")
+
+            data = []
+            solicitudes_de_pago = 0
+            payment = {}
+            payment['reporte'] = {}
+            payment['solicitud_pago'] = {}
+            for deposito in depositos:
+                payment = {
+                    'id':             deposito.id,
+                    'fecha':          deposito.fecha.isoformat(),
+                    'abono':          deposito.abono,
+                    'saldo':          deposito.saldo,
+                    'cargo':          deposito.cargo,
+                    'reporte':        [],
+                    'referencia':     deposito.referencia,
+                    'solicitud_pago': [],
+                }
+
+                if deposito.reporte_deposito is not None:
+                    reporte = {
+                        'banco':       deposito.reporte_deposito.banco.referencia,
+                        'nombre':      deposito.reporte_deposito.nombre_original,
+                        'fecha_carga': deposito.reporte_deposito.fecha_carga.isoformat(),
+                    }
+                    payment['reporte'] = reporte
+
+                solicitud_pago = None if not hasattr(deposito, 'solicitud_de_pago_related') else deposito.solicitud_de_pago_related
+
+                if solicitud_pago is None:
+                    payment['solicitud_pago'] = None
+                else:
+                    solicitud = {
+                        'id':              solicitud_pago.id,
+                        'contribuyente':   solicitud_pago.contribuyente.nombre_completo,
+                        'referencia':      solicitud_pago.referencia_pago.referencia,
+                        'cantidad':        solicitud_pago.cantidad,
+                        'fecha_solicitud': solicitud_pago.fecha_solicitud,
+                        'monto':           str(solicitud_pago.monto),
+                        'descuento':       str(solicitud_pago.descuento),
+                        'total':           str(solicitud_pago.total)
+                    }
+                    payment['solicitud_pago'] = solicitud
+                    solicitudes_de_pago += 1
+                data.append(payment)
+            self.response.update({'depositos': data, 'resumen': {
+                'cant_depositos':   depositos.count(),
+                'cant_solicitudes': solicitudes_de_pago
+            }})
+            self.status_code = 200
+            self.response['is_valid'] = True
+        except Exception as e:
+            self.response['msg'] = e.message
+
+        return JsonResponse(self.response, safe=True, status=self.status_code)
+
+
+class PaymentStatistics(JsonResponseUtils, generic.View):
+    def get(self, request):
+        depositos = Deposito.objects.all().count()
+        monto_pagado = Deposito.objects.all().aggregate(Sum('abono'))
+
+        solicitudes = SolicitudPago.objects.all().count()
+        solicitudes_pagadas = SolicitudPago.objects.exclude(deposito=None).count()
+        solicitudes_pagadas_monto = SolicitudPago.objects.exclude(deposito=None).aggregate(Sum('total'))
+        solicitudes_por_pagar = SolicitudPago.objects.filter(deposito=None).count()
+        solicitudes_por_pagar_monto = SolicitudPago.objects.filter(deposito=None).aggregate(Sum('total'))
+
+        self.response.update({'stats': {
+            'depositos':    {
+                'total': depositos,
+                'monto_pagado': str(monto_pagado['abono__sum']),
+            },
+            'solicitudes': {
+                'total':     solicitudes,
+                'pagadas':   solicitudes_pagadas,
+                'por_pagar': solicitudes_por_pagar,
+                'solicitudes_pagadas_monto': solicitudes_pagadas_monto['total__sum'],
+                'solicitudes_por_pagar_monto': solicitudes_por_pagar_monto['total__sum']
+            }
+        }})
+
+        return JsonResponse(self.response, safe=True, status=self.status_code)
+
+
+class DecreaseMultiplePayments(JsonResponseUtils, generic.View):
+    fillable = ['referencia']
+
+    def post(self, request):
+        try:
+            self.validate_fillable_fields()
+            deposito = Deposito.get_by_referencia(request.POST.get('referencia'))
+            if deposito.multiples_pagos == 1:
+                raise Exception("La referencia {0} no tiene multiples pagos".format(deposito.referencia))
+            deposito.multiples_pagos -= 1
+            deposito.save()
+            self.response.update({'errors': ''})
+        except Deposito.DoesNotExist as e:
+            self.response.update({'errors': e.message})
+            self.status_code = 404
+        except Exception as e:
+            self.response.update({'errors': e.message})
+
+        return JsonResponse(self.response, safe=True, status=self.status_code)
+
+
+class CreateDeposito(JsonResponseUtils, generic.View):
+    fillable = ['referencia', 'abono', 'reporte_deposito']
+
+    def validate_fields(self):
+        for field in self.fill:
+            if field not in self.request.POST:
+                self.invalid_fields.append(field)
+        if len(self.invalid_fields) > 0:
+            return False
+        return True
+
+    @staticmethod
+    def validate_referencia(referencia):
+        if not ReferenciaPago.objects.filter(referencia__exact=referencia).exists():
+            return False
+        return True
+
+    @staticmethod
+    def create_deposito(fecha=None, abono=None, referencia=None, reporte_deposito=None):
+        try:
+            deposito = Deposito.objects.get(referencia=referencia)
+            deposito.multiples_pagos += 1
+            deposito.save()
+            return deposito
+        except Deposito.DoesNotExist:
+            try:
+                deposito = Deposito()
+                deposito.fecha = fecha
+                deposito.referencia = referencia
+                deposito.abono = abono
+                deposito.saldo = decimal.Decimal('0')
+                deposito.cargo = decimal.Decimal('0')
+                deposito.reporte_deposito = None if reporte_deposito == '0' else reporte_deposito
+                deposito.save()
+                return deposito
+            except Exception as e:
+                raise
+
+    def get(self, request):
+        return HttpResponseBadRequest("Bad request!")
+
+    def post(self, request):
+        try:
+            if not self.validate_fields():
+                self.invalid_content = ', '.join(self.invalid_fields)
+                self.response.update({'errors': 'missing field: ' + self.invalid_content})
+                raise Exception
+
+            fecha = datetime.datetime.today()
+            abono = request.POST.get('abono')
+            referencia = request.POST.get('referencia')
+            reporte_deposito = request.POST.get('reporte_deposito')
+
+            if not self.validate_referencia(referencia):
+                self.invalid_content = 'la referencia {0} no existe'.format(referencia)
+                self.response.update({'errors': self.invalid_content})
+                raise Exception
+
+            deposito = self.create_deposito(fecha, abono, referencia, reporte_deposito)
+            data = {
+                'id':              deposito.id,
+                'fecha':           deposito.fecha,
+                'referencia':      deposito.referencia,
+                'abono':           deposito.abono,
+                'saldo':           deposito.saldo,
+                'cargo':           deposito.cargo,
+                'multiples_pagos': deposito.multiples_pagos,
+            }
+            self.response.update({'deposito': data})
+            self.status_code = 200
+            self.response['is_valid'] = True
+        except Exception as e:
+            pass
+
+        return JsonResponse(self.response, safe=True, status=self.status_code)

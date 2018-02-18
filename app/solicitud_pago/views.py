@@ -118,6 +118,7 @@ class SolicitudPagoResource(APIView):
                 # Creamos un contribuyente
                 contribuyente = Contribuyente()
             else:
+                # TODO Transaformar a minusculas o mayusculas para evitar errores al comparar los mismos nombres pero ingresados en may o min
                 if nombre_completo != contribuyente.nombre_completo:
                     raise Exception('Tus datos no coinciden. ¿Corresponde tu CURP con tu Nombre?')
 

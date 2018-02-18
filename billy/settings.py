@@ -42,17 +42,22 @@ INSTALLED_APPS = [
     'app.ficha_deposito.apps.FichaDepositoConfig',
     'app.pago.apps.PagoConfig',
     'app.solicitud_pago.apps.SolicitudPagoConfig',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = local_settings.CORS_ORIGIN_ALLOW_ALL
+CORS_ALLOW_CREDENTIALS = local_settings.CORS_ALLOW_CREDENTIALS
+CORS_ORIGIN_WHITELIST = local_settings.CORS_ORIGIN_WHITELIST
 
 ROOT_URLCONF = 'billy.urls'
 
@@ -99,6 +104,10 @@ USE_TZ = False
 STATIC_ROOT = 'billy/static/'
 
 STATIC_URL = '/static/'
+
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
 
 LOGGING = {
     'version':                  1,
