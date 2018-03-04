@@ -1,3 +1,5 @@
+import bugsnag
+from django.http import JsonResponse
 from django.views import generic
 
 from app.general.mixins import JsonResponseMixin
@@ -29,3 +31,9 @@ class BancoListView(JsonResponseMixin, generic.ListView):
             queryset = super(BancoListView, self).get_queryset()
 
         return queryset
+
+
+class TestBugsnagReport(generic.View):
+    def get(self, request):
+        bugsnag.notify(Exception("Test xxxx"))
+        return JsonResponse([], safe=False)

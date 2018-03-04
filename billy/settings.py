@@ -53,6 +53,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'bugsnag.django.middleware.BugsnagMiddleware',
 ]
 
 CORS_ORIGIN_ALLOW_ALL = local_settings.CORS_ORIGIN_ALLOW_ALL
@@ -126,4 +127,9 @@ LOGGING = {
             'propagate': False,
         },
     },
+}
+
+BUGSNAG = {
+    'api_key': local_settings.BUGSNAG_API_KEY,
+    'project_root': BASE_DIR,
 }
