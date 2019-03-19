@@ -44,6 +44,7 @@ def serializar_solicitud(solicitud_pago):
         },
         'fecha_solicitud': str(solicitud_pago.fecha_solicitud),
         'monto':           str(solicitud_pago.monto),
+        'total':           str(solicitud_pago.total),
         'descuento':       str(solicitud_pago.descuento),
         'contribuyente':   model_to_dict(solicitud_pago.contribuyente, exclude='id'),
         'deposito':        None
