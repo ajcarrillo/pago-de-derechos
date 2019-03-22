@@ -111,6 +111,7 @@ class SolicitudPagoResource(APIView):
                 except Contribuyente.DoesNotExist:
                     # Buscamos por nombre
                     try:
+                        # TODO Verificar que se busquen exactamente los nombres tal cual se envían, no es lo mismo Andrés Carrillo que Andres Carrillo
                         contribuyente = Contribuyente.objects.filter(nombre_completo=nombre_completo)[:1].get()
                     except Contribuyente.DoesNotExist:
                         contribuyente = None
