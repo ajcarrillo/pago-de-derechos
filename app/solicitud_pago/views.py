@@ -206,9 +206,6 @@ class SolicitudPagoResource(APIView):
             return http_response
         except Exception as e:
             transaction.rollback()
-            print '*'*50
-            print e.message
-            print '*'*50
             return HttpResponse(e, status=400)
 
     def clean_dict(self, dict):
