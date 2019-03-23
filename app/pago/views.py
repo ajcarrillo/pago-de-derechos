@@ -87,7 +87,7 @@ class ReporteDepositoView(generic.View):
             msg = "Reporte: {0}, Reportados: {1}, Procesados: {2}, Contenido Fallido: {3}" \
                 .format(self.reporte_procesado.id, self.reporte_procesado.depositos_reportados,
                         self.reporte_procesado.depositos_procesados, self.reporte_procesado.contenido_fallido)
-            return HttpResponse(msg, status=400)
+            return HttpResponse(msg, status=200)
         except Exception as e:
             logger.warning(str(e))
             transaction.rollback()
