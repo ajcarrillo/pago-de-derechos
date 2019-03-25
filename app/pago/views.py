@@ -303,7 +303,8 @@ class AsignarPagoView(generic.View):
             id_deposito = request.GET.get('id_deposito')
             id_solicitud_pago = request.GET.get('id_solicitud_pago')
 
-            # Here comes the assignation!
+            if id_deposito is None or id_solicitud_pago is None:
+                raise Exception('El déposito y la solicitud de pago son requeridos')
 
             try:
                 solicitud_pago = SolicitudPago.objects.get(pk=id_solicitud_pago)
@@ -321,7 +322,7 @@ class AsignarPagoView(generic.View):
                 }
             return HttpResponse(json.dumps(response, indent=4), content_type='application/json; charset=UTF-8')
         except Exception as e:
-            return HttpResponse(e, status=404)
+            return HttpResponse(e, status=400)
 
 
 class JsonResponseUtils(object):
