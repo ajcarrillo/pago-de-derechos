@@ -20,4 +20,5 @@ urlpatterns = [
     url(r'^decrease/$', views.DecreaseMultiplePayments.as_view()),
 
     url(r'^stats/payments/$', views.PaymentStatistics.as_view()),
+    url(r'^reporte-pagos/$', views.ReportesBancariosView.as_view()),
 ]

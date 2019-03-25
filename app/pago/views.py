@@ -548,3 +548,23 @@ class CreateDeposito(JsonResponseUtils, generic.View):
             pass
 
         return JsonResponse(self.response, safe=True, status=self.status_code)
+
+
+class ReportesBancariosView(JsonResponseUtils, generic.View):
+    def get(self, request):
+
+        reportes = ReporteDeposito.objects.select_related('banco').all()
+
+        data = [{'id':                   reporte.pk,
+                 'depositos_reportados': reporte.depositos_reportados,
+                 'depositos_procesados': reporte.depositos_procesados,
+                 'nombre_original':      reporte.nombre_original,
+                 'fecha_carga':          reporte.fecha_carga,
+                 'banco':                reporte.banco.referencia
+                 } for reporte in reportes]
+
+        self.response.update({
+            'reportes': data
+        })
+
+        return JsonResponse(self.response, safe=True, status=self.status_code)
