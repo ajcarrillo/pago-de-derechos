@@ -185,8 +185,8 @@ class ReporteDepositoView(generic.View):
                 if splits[0] == 'Nombre':
                     continue
                 self.pagos_reportados += 1
-                referencia = splits[8]
-                fecha = time.strptime(splits[12], '%d/%m/%Y')
+                referencia = splits[10]
+                fecha = time.strptime(splits[14], '%d/%m/%Y')
                 self.guardar_deposito(fecha, referencia)
             except Exception as e:
                 logger.warning(e)
